@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:int-kafka="http://www.springframework.org/schema/integration/kafka"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="http://www.springframework.org/schema/integration/kafka http://www.springframework.org/schema/integration/kafka/spring-integration-kafka.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
+	
+	<!-- zk连接 -->
+	<bean id="zookeeperConnect" class="org.springframework.integration.kafka.support.ZookeeperConnect">
+		<property name="zkConnect" value="${kafka.zookeeper.address}"/>
+		<property name="zkConnectionTimeout" value="6000"/>
+		<property name="zkSessionTimeout" value="6000"/>
+		<property name="zkSyncTime" value="2000"/>
+	</bean>
+	
+    <!-- topic offset manager -->
+    <bean id="kafkaTopicOffsetManager" class="org.springframework.integration.kafka.listener.KafkaTopicOffsetManager">
+    	<constructor-arg index="0" ref="zookeeperConnect"/>
+    	<!-- 这里配置的topic用来记录已经读取过的消息 -->
+    	<constructor-arg index="1" value="${log.topic}_read_record_times"/>
+    </bean>
+    
+    <!-- zk -->
+ 	<bean id="zookeeperConfiguration" class="org.springframework.integration.kafka.core.ZookeeperConfiguration">
+ 	 	<constructor-arg index="0" ref="zookeeperConnect"/>
+ 	</bean>
+ 	
+    <!-- 消息监听容器  --> 
+    <bean id="kafkaMessageListenerContainer" class="org.springframework.integration.kafka.listener.KafkaMessageListenerContainer" >
+    	<constructor-arg index="0">
+   			<bean class="org.springframework.integration.kafka.core.DefaultConnectionFactory">
+   				<constructor-arg name="configuration" ref="zookeeperConfiguration"/>
+   			</bean>
+    	</constructor-arg>
+   		<constructor-arg index="1">
+	   		<list>
+	   			<value>${log.topic}</value>
+	   		</list>
+   		</constructor-arg>
+   		<property name="messageListener" ref="consumerMessageListener"/>
+   		<property name="offsetManager" ref="kafkaTopicOffsetManager"/>
+ 	 </bean>
+</beans>
